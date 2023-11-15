@@ -3,16 +3,7 @@ import transformers
 import json
 import itertools
 import pandas as pd
-
-class Dataset:
-	def __init__(self, textlist, labellist):
-		self.Dict['text'] = textlist
-		self.Dict['labels'] = labellist
-
-class DatasetDict:
-	def __init__(self, train, test):
-		self.Dict['train'] = train
-		self.Dict['test'] = test
+from datasets import Dataset, DatasetDict
 
 def get_subdataset(subdataset_name, sep_token, label_offset=0):
 	
@@ -21,12 +12,12 @@ def get_subdataset(subdataset_name, sep_token, label_offset=0):
 	testtextlist=[]
 	testlabellist=[]
 
-	if 'restaurant' or 'laptop' in subdataset_name:
-		if(subdataset_name=="restaurant"):
+	if 'restaurant' in subdataset_name or 'laptop' in subdataset_name:
+		if('restaurant' in subdataset_name):
 			train_file_path="./SemEval14-res/train.json"
 			test_file_path="./SemEval14-res/test.json"
 			
-		elif(subdataset_name=="laptop"):
+		elif('laptop' in subdataset_name):
 			train_file_path="./SemEval14-laptop/train.json"
 			test_file_path="./SemEval14-laptop/test.json"
 
@@ -53,9 +44,14 @@ def get_subdataset(subdataset_name, sep_token, label_offset=0):
 						testlabellist.append(2+label_offset)
 					testtextlist.append(value['term']+' '+sep_token+value['sentence'])
 
-		train_dataset=Dataset(traintextlist, trainlabellist)
-		test_dataset=Dataset(testtextlist, testlabellist)
-		subdataset=DatasetDict(train_dataset, test_dataset)
+		train_dataset=Dataset({'text': traintextlist, 'labels': trainlabellist})
+		test_dataset=Dataset({'text': testtextlist, 'labels': testlabellist})
+		subdataset=DatasetDict(
+			{
+				'train': train_dataset, 
+				'test': test_dataset
+			}
+		)
 	
 	elif 'acl' in subdataset_name:
 		train_file_path="./acl-arc/train.jsonl"
@@ -71,9 +67,14 @@ def get_subdataset(subdataset_name, sep_token, label_offset=0):
 					testtextlist.append(json.loads(test_line)['text'])
 					testlabellist.append(label2idx[json.loads(test_line)['intent']]+label_offset)
 
-		train_dataset=Dataset(traintextlist, trainlabellist)
-		test_dataset=Dataset(testtextlist, testlabellist)
-		subdataset=DatasetDict(train_dataset, test_dataset)
+		train_dataset=Dataset({'text': traintextlist, 'labels': trainlabellist})
+		test_dataset=Dataset({'text': testtextlist, 'labels': testlabellist})
+		subdataset=DatasetDict(
+			{
+				'train': train_dataset,
+				'test': test_dataset
+			}
+		)
 
 	elif 'agnews' in subdataset_name:
 		Dict={}
@@ -113,8 +114,9 @@ def get_dataset(dataset_name, sep_token):
 	dataset_name: str, the name of the dataset
 	sep_token: str, the sep_token used by tokenizer(e.g. '<sep>')
 	'''
-	if type(dataset)!=list:
-			return get_subdataset(dataset_name, sep_token)
+	if type(dataset_name)!=list:
+		print("1")
+		return get_subdataset(dataset_name, sep_token)
 	else:
 		label_offset=0
 		dataset_list=[]
@@ -123,3 +125,13 @@ def get_dataset(dataset_name, sep_token):
 			label_offset=max(subdataset['train']['labels'])+1
 			dataset_list.append(subdataset)
 		return datasets.concatenate_datasets(dataset_list)
+	
+def main():
+	print("1")
+	test1=get_dataset("restaurant_sup", '<SEP>')
+	train=test1.get('train')
+	text=train.get('text')
+	print(text[0:5])
+
+if __name__ == '__main__':
+	main()
