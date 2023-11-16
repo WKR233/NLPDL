@@ -44,8 +44,8 @@ def get_subdataset(subdataset_name, sep_token, label_offset=0):
 						testlabellist.append(2+label_offset)
 					testtextlist.append(value['term']+' '+sep_token+value['sentence'])
 
-		train_dataset=Dataset({'text': traintextlist, 'labels': trainlabellist})
-		test_dataset=Dataset({'text': testtextlist, 'labels': testlabellist})
+		train_dataset=Dataset.from_dict({'text': traintextlist, 'labels': trainlabellist})
+		test_dataset=Dataset.from_dict({'text': testtextlist, 'labels': testlabellist})
 		subdataset=DatasetDict(
 			{
 				'train': train_dataset, 
@@ -56,19 +56,17 @@ def get_subdataset(subdataset_name, sep_token, label_offset=0):
 	elif 'acl' in subdataset_name:
 		train_file_path="./acl-arc/train.jsonl"
 		test_file_path="./acl-arc/test.jsonl"
-		label2idx={'Uses': 0, 'Future': 1, 'CompareOrContrast': 2, 'Motivation': 3, 'Extends': 4, 'Background': 5}
-
 		with open(train_file_path, 'r') as train_file:
 			with open(test_file_path, 'r') as test_file:
 				for train_line in train_file:
 					traintextlist.append(json.loads(train_line)['text'])
-					trainlabellist.append(label2idx[json.loads(train_line)['intent']]+label_offset)
+					trainlabellist.append(json.loads(train_line)['intent']+label_offset)
 				for test_line in test_file:
 					testtextlist.append(json.loads(test_line)['text'])
-					testlabellist.append(label2idx[json.loads(test_line)['intent']]+label_offset)
+					testlabellist.append(json.loads(test_line)['intent']+label_offset)
 
-		train_dataset=Dataset({'text': traintextlist, 'labels': trainlabellist})
-		test_dataset=Dataset({'text': testtextlist, 'labels': testlabellist})
+		train_dataset=Dataset.from_dict({'text': traintextlist, 'labels': trainlabellist})
+		test_dataset=Dataset.from_dict({'text': testtextlist, 'labels': testlabellist})
 		subdataset=DatasetDict(
 			{
 				'train': train_dataset,
@@ -85,10 +83,7 @@ def get_subdataset(subdataset_name, sep_token, label_offset=0):
 				textlist.append(json.loads(line)['text'])
 				labellist.append(json.loads(line)['label']+label_offset)
 
-		Dict['text']=textlist
-		Dict['label']=labellist
-
-		subdataset=datasets.Dataset.from_pandas(pd.DataFrame.from_dict(Dict))
+		subdataset=Dataset.from_dict({'text': textlist, 'labels': labellist})
 		subdataset=subdataset.train_test_split(test_size=0.1, seed=2022, shuffle=True)
 	
 	if 'fs' in subdataset_name:
@@ -119,19 +114,21 @@ def get_dataset(dataset_name, sep_token):
 		return get_subdataset(dataset_name, sep_token)
 	else:
 		label_offset=0
-		dataset_list=[]
+		train_dataset_list=[]
+		test_dataset_list=[]
 		for dataset in dataset_name:
 			subdataset=get_subdataset(dataset, sep_token, label_offset)
 			label_offset=max(subdataset['train']['labels'])+1
-			dataset_list.append(subdataset)
-		return datasets.concatenate_datasets(dataset_list)
+			train_dataset_list.append(subdataset['train'])
+			test_dataset_list.append(subdataset['test'])
+		return DatasetDict({'train': datasets.concatenate_datasets(train_dataset_list),
+					  		'test': datasets.concatenate_datasets(test_dataset_list)})
 	
 def main():
-	print("1")
-	test1=get_dataset("restaurant_sup", '<SEP>')
-	train=test1.get('train')
-	text=train.get('text')
-	print(text[0:5])
+	test1=get_dataset(["agnews_fs", "restaurant_fs"], '<SEP>')
+	train=test1['train']
+	text=train['text']
+	print(text[0])
 
 if __name__ == '__main__':
 	main()
