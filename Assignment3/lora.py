@@ -2,6 +2,7 @@ import logging
 import os
 import wandb
 import sys
+import peft
 from dataclasses import dataclass, field
 from typing import Optional
 from sklearn.metrics import f1_score, accuracy_score
@@ -67,6 +68,12 @@ def main():
         config={
             "learning_rate": training_args.learning_rate,
             "epochs": training_args.num_train_epochs
+        },
+
+        name={
+            "LoRA"+
+            "dataset="+(str)(data_args.dataset_name)+
+            "seed="+(str)(training_args.seed)
         }
     )
     # Setup logging
@@ -102,6 +109,17 @@ def main():
     config = AutoConfig.from_pretrained(model_args.model_name_or_path, num_labels=num_labels, )
 
     model = AutoModelForSequenceClassification.from_pretrained(model_args.model_name_or_path, config=config, )
+
+    peft_config = peft.LoraConfig(
+        task_type="SEQ_CLS",
+        inference_mode=False, 
+        r=8, 
+        lora_alpha=32, 
+        lora_dropout=0.1
+    )
+    
+    model = peft.get_peft_model(model, peft_config)
+    model.print_trainable_parameters()
 
     padding = "max_length"
 
